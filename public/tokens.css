@@ -20,7 +20,7 @@
   --color-border-error:        #FF6B35;   /* error state border */
 
   /* ── Accent: Amber phosphor ──────────────────────── */
-  --color-accent-primary:      #F5C518;   /* amber — primary CTA, highlights */
+  --color-accent-primary:      #F5C518;   /* amber - primary CTA, highlights */
   --color-accent-primary-hover: #FFD740;  /* brighter amber on hover */
   --color-accent-primary-active: #C9A000; /* pressed state */
   --color-accent-glow:         rgba(245, 197, 24, 0.15); /* ambient glow */
@@ -35,9 +35,9 @@
   /* ── Segment colors (cron expression fields) ─────── */
   --color-segment-minutes:     #4A9EFF;   /* blue */
   --color-segment-hours:       #4CAF50;   /* green */
-  --color-segment-dom:         #FF9800;   /* orange — day of month */
+  --color-segment-dom:         #FF9800;   /* orange - day of month */
   --color-segment-month:       #9C27B0;   /* purple */
-  --color-segment-dow:         #F44336;   /* red — day of week */
+  --color-segment-dow:         #F44336;   /* red - day of week */
 
   /* Muted variants for background highlights */
   --color-segment-minutes-bg:  rgba(74, 158, 255, 0.12);
@@ -52,8 +52,8 @@
   /* ─────────────────────────────────────────────────── */
   /* ── Typography ──────────────────────────────────── */
   --font-family-mono:          'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-  --font-family-display:       var(--font-family-mono); /* same — terminal aesthetic */
-  --font-family-body:          var(--font-family-mono); /* same — monospace everywhere */
+  --font-family-display:       var(--font-family-mono); /* same - terminal aesthetic */
+  --font-family-body:          var(--font-family-mono); /* same - monospace everywhere */
 
   --font-size-xs:              0.625rem;  /* 10px */
   --font-size-sm:              0.75rem;   /* 12px */
@@ -63,7 +63,7 @@
   --font-size-xl:              1.25rem;   /* 20px */
   --font-size-2xl:             1.5rem;    /* 24px */
   --font-size-3xl:             2rem;      /* 32px */
-  --font-size-4xl:             2.5rem;    /* 40px — hero cron input */
+  --font-size-4xl:             2.5rem;    /* 40px - hero cron input */
 
   --font-weight-normal:        400;
   --font-weight-medium:        500;
@@ -97,7 +97,7 @@
   --max-width-wide:            72rem;     /* ~1152px two-column area */
   --max-width-page:            90rem;     /* ~1440px hard cap */
 
-  --border-radius-sm:          2px;       /* terminal feel — nearly square */
+  --border-radius-sm:          2px;       /* terminal feel - nearly square */
   --border-radius-md:          4px;
   --border-radius-lg:          6px;
   --border-radius-full:        9999px;    /* pill (mode toggle) */
@@ -123,14 +123,14 @@
   --easing-bounce:     cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* ─────────────────────────────────────────────────── */
-  /* ── Breakpoints (reference only — use in @media) ── */
+  /* ── Breakpoints (reference only - use in @media) ── */
   --breakpoint-md:  768px;
   --breakpoint-lg:  1024px;
   --breakpoint-xl:  1280px;
 }
 
 /* ─── Light mode overrides ───────────────────────────────────────────────── */
-/* Light mode is intentionally muted — terminal tools live in dark. */
+/* Light mode is intentionally muted - terminal tools live in dark. */
 [data-theme="light"] {
   --color-bg-primary:          #f5f5f0;
   --color-bg-secondary:        #eaeae4;
@@ -148,7 +148,7 @@
   --color-border-focus:        #C9A000;  /* darker amber for light bg */
   --color-border-error:        #d94f1a;
 
-  --color-accent-primary:      #C9A000;  /* darker amber — contrast on light */
+  --color-accent-primary:      #C9A000;  /* darker amber - contrast on light */
   --color-accent-primary-hover: #F5C518;
   --color-accent-primary-active: #a07800;
   --color-accent-glow:         rgba(201, 160, 0, 0.15);

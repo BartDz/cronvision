@@ -15,7 +15,7 @@
   "timeline_empty_no_runs": "No runs found within 1 year",
   "timeline_empty_fix": "Fix the expression to see next runs",
   "permalink_ready": "Shareable link ready",
-  "error_network": "Network error — is the server running?",
+  "error_network": "Network error - is the server running?",
   "error_invalid": "Invalid expression",
   "theme_toggle_to_light": "Switch to light mode",
   "theme_toggle_to_dark": "Switch to dark mode",

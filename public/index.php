@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CronVision — Cron Expression Explainer & Builder</title>
+  <title>CronVision - Cron Expression Explainer & Builder</title>
   <meta name="description" content="Explain and build cron expressions. Get human-readable descriptions and next scheduled run times with timezone support.">
 
   <?php
@@ -115,7 +115,7 @@
         </div>
         <p
           class="explanation-text"
-          x-text="loading ? t.explanation_loading : (explanation || (error ? '—' : t.explanation_empty))"
+          x-text="loading ? t.explanation_loading : (explanation || (error ? '-' : t.explanation_empty))"
           aria-live="polite"
           :class="{ muted: !explanation || error }"
         ></p>
