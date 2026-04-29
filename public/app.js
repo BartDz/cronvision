@@ -11,25 +11,26 @@ function cronApp() {
     copied: false,
     highlightedSegment: null,
     theme: 'dark',
+    t: {},
 
     segments: [
-      { key: 'minutes', label: 'Minutes', value: '*', placeholder: '*', hint: '0-59' },
-      { key: 'hours',   label: 'Hours',   value: '*', placeholder: '*', hint: '0-23' },
-      { key: 'dom',     label: 'Day',     value: '*', placeholder: '*', hint: '1-31' },
-      { key: 'month',   label: 'Month',   value: '*', placeholder: '*', hint: '1-12' },
-      { key: 'dow',     label: 'Weekday', value: '*', placeholder: '*', hint: '0-6'  },
+      { key: 'minutes', value: '*', placeholder: '*', hint: '0-59' },
+      { key: 'hours',   value: '*', placeholder: '*', hint: '0-23' },
+      { key: 'dom',     value: '*', placeholder: '*', hint: '1-31' },
+      { key: 'month',   value: '*', placeholder: '*', hint: '1-12' },
+      { key: 'dow',     value: '*', placeholder: '*', hint: '0-6'  },
     ],
 
     presets: [
-      { label: 'Every minute',     expr: '* * * * *'    },
-      { label: 'Every hour',       expr: '0 * * * *'    },
-      { label: 'Daily midnight',   expr: '0 0 * * *'    },
-      { label: 'Weekdays 9am',     expr: '0 9 * * 1-5'  },
-      { label: 'n8n 15min',        expr: '*/15 * * * *' },
-      { label: 'n8n Workdays 8am', expr: '0 8 * * 1-5'  },
+      { key: 'preset_every_minute',   expr: '* * * * *'    },
+      { key: 'preset_every_hour',     expr: '0 * * * *'    },
+      { key: 'preset_daily_midnight', expr: '0 0 * * *'    },
+      { key: 'preset_weekdays_9am',   expr: '0 9 * * 1-5'  },
+      { key: 'preset_n8n_15min',      expr: '*/15 * * * *' },
+      { key: 'preset_n8n_workdays',   expr: '0 8 * * 1-5'  },
     ],
 
-    init() {
+    async init() {
       const params = new URLSearchParams(window.location.search);
       if (params.get('expr'))   this.expression = params.get('expr');
       if (params.get('tz'))     this.timezone   = params.get('tz');
@@ -38,10 +39,29 @@ function cronApp() {
 
       this.theme = document.documentElement.dataset.theme || 'dark';
 
+      await this.loadLang(this.locale);
+
       if (this.expression) {
         this.syncSegmentsFromExpression();
         this.fetchCron();
       }
+    },
+
+    async loadLang(locale) {
+      try {
+        const res = await fetch(`/lang/${locale}.json`);
+        this.t = await res.json();
+        this.syncSegmentLabels();
+      } catch {
+        // keep existing t
+      }
+    },
+
+    syncSegmentLabels() {
+      const keys = ['minutes', 'hours', 'dom', 'month', 'dow'];
+      this.segments.forEach((seg, i) => {
+        seg.label = this.t[`seg_${keys[i]}_label`] || seg.key;
+      });
     },
 
     setMode(m) {
@@ -52,8 +72,9 @@ function cronApp() {
       }
     },
 
-    setLocale(l) {
+    async setLocale(l) {
       this.locale = l;
+      await this.loadLang(l);
       this.updateUrl();
       if (this.expression) this.fetchCron();
     },
@@ -104,10 +125,10 @@ function cronApp() {
         } else {
           this.explanation = '';
           this.nextRuns    = [];
-          this.error       = data.error || 'Invalid expression';
+          this.error       = data.error || this.t.error_invalid || 'Invalid expression';
         }
-      } catch (e) {
-        this.error = 'Network error — is the server running?';
+      } catch {
+        this.error = this.t.error_network || 'Network error';
       } finally {
         this.loading = false;
       }

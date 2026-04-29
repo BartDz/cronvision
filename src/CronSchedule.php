@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 declare(strict_types=1);
 
@@ -6,30 +6,19 @@ class CronSchedule
 {
     private const RANGES = [
         'minutes' => [0, 59],
-        'hours'   => [0, 23],
-        'dom'     => [1, 31],
-        'month'   => [1, 12],
-        'dow'     => [0, 6],
+        'hours' => [0, 23],
+        'dom' => [1, 31],
+        'month' => [1, 12],
+        'dow' => [0, 6],
     ];
-
-    private const MONTH_EN = ['', 'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'];
-
-    private const MONTH_PL = ['', 'styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec',
-        'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
-
-    private const DOW_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-    private const DOW_PL       = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
-    private const DOW_PL_GEN   = ['niedzieli', 'poniedziałku', 'wtorku', 'środy', 'czwartku', 'piątku', 'soboty'];
 
     /** @var array<string, array{expr: string, values: int[]}> */
     private array $fields;
 
-    public function __construct(private readonly string $expression)
-    {
+    public function __construct(
+        private readonly string $expression
+    ) {
         $parts = preg_split('/\s+/', trim($expression));
-
         if (count($parts) !== 5) {
             throw new \InvalidArgumentException(
                 sprintf('Expression must have 5 fields, got %d', count($parts))
@@ -41,7 +30,7 @@ class CronSchedule
             $name = $names[$i];
             [$min, $max] = self::RANGES[$name];
             $this->fields[$name] = [
-                'expr'   => $part,
+                'expr' => $part,
                 'values' => $this->parseField($part, $min, $max, $name),
             ];
         }
@@ -51,73 +40,75 @@ class CronSchedule
     private function parseField(string $field, int $min, int $max, string $name): array
     {
         $values = [];
-
         foreach (explode(',', $field) as $segment) {
-            $segment = trim($segment);
-
-            if ($segment === '*') {
-                for ($i = $min; $i <= $max; $i++) {
-                    $values[] = $i;
-                }
-                continue;
-            }
-
-            if (str_contains($segment, '/')) {
-                [$range, $step] = explode('/', $segment, 2);
-                $step = (int) $step;
-                if ($step < 1) {
-                    throw new \InvalidArgumentException("Step must be >= 1 in field '$name'");
-                }
-
-                if ($range === '*') {
-                    [$start, $end] = [$min, $max];
-                } elseif (str_contains($range, '-')) {
-                    [$start, $end] = array_map('intval', explode('-', $range, 2));
-                } else {
-                    $start = (int) $range;
-                    $end   = $max;
-                }
-
-                for ($i = $start; $i <= $end; $i += $step) {
-                    $values[] = $i;
-                }
-                continue;
-            }
-
-            if (str_contains($segment, '-')) {
-                [$start, $end] = array_map('intval', explode('-', $segment, 2));
-                if ($start > $end) {
-                    throw new \InvalidArgumentException(
-                        "Range start > end in field '$name': $start-$end"
-                    );
-                }
-                for ($i = $start; $i <= $end; $i++) {
-                    $values[] = $i;
-                }
-                continue;
-            }
-
-            if (!is_numeric($segment)) {
-                throw new \InvalidArgumentException(
-                    "Invalid value '$segment' in field '$name'"
-                );
-            }
-
-            $values[] = (int) $segment;
+            $values = array_merge($values, $this->parseSegment(trim($segment), $min, $max, $name));
         }
-
-        foreach ($values as $v) {
-            if ($v < $min || $v > $max) {
-                throw new \InvalidArgumentException(
-                    sprintf('%s value %d out of range %d–%d', ucfirst($name), $v, $min, $max)
-                );
-            }
-        }
-
+        $this->validateBounds($values, $min, $max, $name);
         return array_values(array_unique($values));
     }
 
-    /** @return \DateTimeImmutable[] */
+    /** @return int[] */
+    private function parseSegment(string $segment, int $min, int $max, string $name): array
+    {
+        if ($segment === '*') {
+            return range($min, $max);
+        }
+        if (str_contains($segment, '/')) {
+            return $this->parseStep($segment, $min, $max, $name);
+        }
+        if (str_contains($segment, '-')) {
+            return $this->parseRange($segment, $name);
+        }
+        if (!is_numeric($segment)) {
+            throw new \InvalidArgumentException("Invalid value '$segment' in field '$name'");
+        }
+        return [(int) $segment];
+    }
+
+    /** @return int[] */
+    private function parseStep(string $segment, int $min, int $max, string $name): array
+    {
+        [$range, $step] = explode('/', $segment, 2);
+        $step = (int) $step;
+        if ($step < 1) {
+            throw new \InvalidArgumentException("Step must be >= 1 in field '$name'");
+        }
+        if ($range === '*') {
+            [$start, $end] = [$min, $max];
+        } elseif (str_contains($range, '-')) {
+            [$start, $end] = array_map('intval', explode('-', $range, 2));
+        } else {
+            $start = (int) $range;
+            $end   = $max;
+        }
+        return range($start, $end, $step);
+    }
+
+    /** @return int[] */
+    private function parseRange(string $segment, string $name): array
+    {
+        [$start, $end] = array_map('intval', explode('-', $segment, 2));
+        if ($start > $end) {
+            throw new \InvalidArgumentException("Range start > end in field '$name': $start-$end");
+        }
+        return range($start, $end);
+    }
+
+    /** @param int[] $values */
+    private function validateBounds(array $values, int $min, int $max, string $name): void
+    {
+        foreach ($values as $v) {
+            if ($v < $min || $v > $max) {
+                throw new \InvalidArgumentException(
+                    sprintf('%s value %d out of range %d-%d', ucfirst($name), $v, $min, $max)
+                );
+            }
+        }
+    }
+
+    /**
+     * @return \DateTimeImmutable[]
+     */
     public function nextRuns(int $count = 10, string $timezone = 'Europe/Warsaw'): array
     {
         try {
@@ -126,19 +117,19 @@ class CronSchedule
             throw new \InvalidArgumentException("Unknown timezone: '$timezone'");
         }
 
-        $now     = new \DateTimeImmutable('now', $tz);
+        $now = new \DateTimeImmutable('now', $tz);
         $current = $now
             ->setTime((int) $now->format('H'), (int) $now->format('i'), 0)
             ->modify('+1 minute');
 
-        $runs  = [];
-        $limit = 527040; // 366 days × 1440 minutes
+        $runs = [];
+        $limit = 527040;  // 366 days × 1440 minutes
 
         for ($i = 0; $i < $limit && count($runs) < $count; $i++) {
             if (
                 in_array((int) $current->format('n'), $this->fields['month']['values'], true) &&
-                in_array((int) $current->format('j'), $this->fields['dom']['values'], true)   &&
-                in_array((int) $current->format('w'), $this->fields['dow']['values'], true)   &&
+                in_array((int) $current->format('j'), $this->fields['dom']['values'], true) &&
+                in_array((int) $current->format('w'), $this->fields['dow']['values'], true) &&
                 in_array((int) $current->format('G'), $this->fields['hours']['values'], true) &&
                 in_array((int) $current->format('i'), $this->fields['minutes']['values'], true)
             ) {
@@ -153,178 +144,182 @@ class CronSchedule
 
     public function explain(string $locale = 'en'): string
     {
-        $pl  = $locale === 'pl';
+        $langFile = __DIR__ . '/../lang/' . $locale . '.php';
+        $t = file_exists($langFile) ? require $langFile : require __DIR__ . '/../lang/en.php';
+
         $min = $this->fields['minutes']['expr'];
-        $hr  = $this->fields['hours']['expr'];
+        $hr = $this->fields['hours']['expr'];
         $dom = $this->fields['dom']['expr'];
         $mon = $this->fields['month']['expr'];
         $dow = $this->fields['dow']['expr'];
 
-        // Pure wildcard
         if ($min === '*' && $hr === '*' && $dom === '*' && $mon === '*' && $dow === '*') {
-            return $pl ? 'Co minutę' : 'Every minute';
+            return $t['every_minute'];
         }
 
         $parts = [];
 
-        // Time clause: minute + hour combined
-        $parts[] = $this->explainTime($min, $hr, $pl);
+        $parts[] = $this->explainTime($min, $hr, $t);
 
-        if ($dom !== '*') {
-            $parts[] = $this->explainDom($dom, $pl);
-        }
-        if ($mon !== '*') {
-            $parts[] = $this->explainMonth($mon, $pl);
-        }
-        if ($dow !== '*') {
-            $parts[] = $this->explainDow($dow, $pl);
-        }
+        if ($dom !== '*')
+            $parts[] = $this->explainDom($dom, $t);
+        if ($mon !== '*')
+            $parts[] = $this->explainMonth($mon, $t);
+        if ($dow !== '*')
+            $parts[] = $this->explainDow($dow, $t);
 
         return ucfirst(implode(', ', array_filter($parts)));
     }
 
-    private function explainTime(string $minExpr, string $hrExpr, bool $pl): string
+    /** @param array<string, mixed> $t */
+    private function explainTime(string $minExpr, string $hrExpr, array $t): string
     {
-        // Specific minute + specific hour → "at HH:MM"
         if (is_numeric($minExpr) && is_numeric($hrExpr)) {
-            $time = sprintf('%02d:%02d', (int) $hrExpr, (int) $minExpr);
-            return $pl ? "o $time" : "at $time";
+            return $this->explainExactTime($minExpr, $hrExpr, $t);
         }
-
-        // Every N minutes
         if (preg_match('/^\*\/(\d+)$/', $minExpr, $m)) {
-            $n    = (int) $m[1];
-            $freq = $pl
-                ? "co $n " . $this->plForm($n, 'minutę', 'minuty', 'minut')
-                : "every $n minute" . ($n !== 1 ? 's' : '');
-
-            if ($hrExpr === '*') {
-                return $freq;
-            }
-            return "$freq, " . $this->formatHourRange($hrExpr, $pl);
+            return $this->explainSteppedMinutes((int) $m[1], $hrExpr, $t);
         }
-
-        // Minute 0 + wildcard hour
-        if ($minExpr === '0' && $hrExpr === '*') {
-            return $pl ? 'o pełnej każdej godziny' : 'at the start of every hour';
-        }
-
-        // Minute 0 + specific/range hour
         if ($minExpr === '0') {
-            return $this->formatHourRange($hrExpr, $pl);
+            return $this->explainOnTheHour($hrExpr, $t);
         }
-
-        // Wildcard minute + specific hour
         if ($minExpr === '*' && $hrExpr !== '*') {
-            $hourStr = $this->formatHourRange($hrExpr, $pl);
-            return $pl ? "co minutę $hourStr" : "every minute $hourStr";
+            return sprintf($t['every_min_during'], $this->formatHourRange($hrExpr, $t));
         }
-
-        // Fallback: compose both
-        $parts = [];
-        if ($minExpr !== '*') {
-            $parts[] = $pl ? "w minucie $minExpr" : "at minute $minExpr";
-        }
-        if ($hrExpr !== '*') {
-            $parts[] = $this->formatHourRange($hrExpr, $pl);
-        }
-        return implode(', ', $parts) ?: ($pl ? 'co minutę' : 'every minute');
+        return $this->explainFallbackTime($minExpr, $hrExpr, $t);
     }
 
-    private function formatHourRange(string $expr, bool $pl): string
+    /** @param array<string, mixed> $t */
+    private function explainExactTime(string $minExpr, string $hrExpr, array $t): string
+    {
+        $time = sprintf('%02d:%02d', (int) $hrExpr, (int) $minExpr);
+        return sprintf($t['at_time'], $time);
+    }
+
+    /** @param array<string, mixed> $t */
+    private function explainSteppedMinutes(int $step, string $hrExpr, array $t): string
+    {
+        $freq = sprintf($t['every_n_minutes'], $step, $this->plural($step, $t['minute_forms']));
+        if ($hrExpr === '*') {
+            return $freq;
+        }
+        return $freq . ', ' . $this->formatHourRange($hrExpr, $t);
+    }
+
+    /** @param array<string, mixed> $t */
+    private function explainOnTheHour(string $hrExpr, array $t): string
+    {
+        if ($hrExpr === '*') {
+            return $t['at_start_of_hour'];
+        }
+        return $this->formatHourRange($hrExpr, $t);
+    }
+
+    /** @param array<string, mixed> $t */
+    private function explainFallbackTime(string $minExpr, string $hrExpr, array $t): string
+    {
+        $parts = [];
+        if ($minExpr !== '*') {
+            $parts[] = sprintf($t['at_minute'], (int) $minExpr);
+        }
+        if ($hrExpr !== '*') {
+            $parts[] = $this->formatHourRange($hrExpr, $t);
+        }
+        return implode(', ', $parts) ?: $t['every_minute'];
+    }
+
+    /**
+     * @param array<string, mixed> $t
+     */
+    private function formatHourRange(string $expr, array $t): string
     {
         if (is_numeric($expr)) {
-            $time = sprintf('%02d:00', (int) $expr);
-            return $pl ? "o $time" : "at $time";
+            return sprintf($t['at_time'], sprintf('%02d:00', (int) $expr));
         }
 
         if (preg_match('/^(\d+)-(\d+)$/', $expr, $m)) {
-            $from = sprintf('%02d:00', (int) $m[1]);
-            $to   = sprintf('%02d:00', (int) $m[2]);
-            return $pl ? "między $from a $to" : "from $from through $to";
+            return sprintf($t['time_range'],
+                sprintf('%02d:00', (int) $m[1]),
+                sprintf('%02d:00', (int) $m[2]));
         }
 
         if (preg_match('/^\*\/(\d+)$/', $expr, $m)) {
             $n = (int) $m[1];
-            return $pl
-                ? "co $n " . $this->plForm($n, 'godzinę', 'godziny', 'godzin')
-                : "every $n hour" . ($n !== 1 ? 's' : '');
+            return sprintf($t['every_n_hours'], $n, $this->plural($n, $t['hour_forms']));
         }
 
-        // Comma list
         $times = array_map(fn($h) => sprintf('%02d:00', (int) $h), explode(',', $expr));
-        $last  = array_pop($times);
-        return $pl
-            ? 'o ' . implode(', ', $times) . " i $last"
-            : 'at ' . implode(', ', $times) . " and $last";
+        $last = array_pop($times);
+        return sprintf($t['time_list'], implode(', ', $times), $last);
     }
 
-    private function explainDom(string $expr, bool $pl): string
+    /**
+     * @param array<string, mixed> $t
+     */
+    private function explainDom(string $expr, array $t): string
     {
         if (is_numeric($expr)) {
-            return $pl ? (int)$expr . '. dnia miesiąca' : 'on day ' . (int)$expr . ' of the month';
+            return sprintf($t['dom_day'], (int) $expr);
         }
         if (preg_match('/^(\d+)-(\d+)$/', $expr, $m)) {
-            return $pl
-                ? "od {$m[1]}. do {$m[2]}. dnia miesiąca"
-                : "on days {$m[1]} through {$m[2]} of the month";
+            return sprintf($t['dom_range'], (int) $m[1], (int) $m[2]);
         }
-        return $pl ? 'w wybrane dni miesiąca' : 'on selected days of the month';
+        return $t['dom_select'];
     }
 
-    private function explainMonth(string $expr, bool $pl): string
+    /**
+     * @param array<string, mixed> $t
+     */
+    private function explainMonth(string $expr, array $t): string
     {
-        $names = $pl ? self::MONTH_PL : self::MONTH_EN;
-
         if (is_numeric($expr)) {
-            $name = $names[(int) $expr];
-            return $pl ? "w $name" : "in $name";
+            return sprintf($t['month_in'], $t['months'][(int) $expr]);
         }
         if (preg_match('/^(\d+)-(\d+)$/', $expr, $m)) {
-            return $pl
-                ? "od {$names[(int)$m[1]]} do {$names[(int)$m[2]]}"
-                : "from {$names[(int)$m[1]]} through {$names[(int)$m[2]]}";
+            return sprintf($t['month_range'], $t['months'][(int) $m[1]], $t['months'][(int) $m[2]]);
         }
         if (str_contains($expr, ',')) {
-            $list = array_map(fn($n) => $names[(int) $n], explode(',', $expr));
+            $list = array_map(fn($n) => $t['months'][(int) $n], explode(',', $expr));
             $last = array_pop($list);
-            return $pl
-                ? 'w ' . implode(', ', $list) . " i $last"
-                : 'in ' . implode(', ', $list) . " and $last";
+            return sprintf($t['month_list'], implode(', ', $list), $last);
         }
         return '';
     }
 
-    private function explainDow(string $expr, bool $pl): string
+    /**
+     * @param array<string, mixed> $t
+     */
+    private function explainDow(string $expr, array $t): string
     {
-        $names = $pl ? self::DOW_PL : self::DOW_EN;
-
         if (is_numeric($expr)) {
-            $day = $names[(int) $expr];
-            return $pl ? "w $day" : "on {$day}s";
+            return sprintf($t['dow_single'], $t['dow'][(int) $expr]);
         }
         if (preg_match('/^(\d+)-(\d+)$/', $expr, $m)) {
-            $gen = $pl ? self::DOW_PL_GEN : $names;
-            return $pl
-                ? "od {$gen[(int)$m[1]]} do {$gen[(int)$m[2]]}"
-                : "{$names[(int)$m[1]]} through {$names[(int)$m[2]]}";
+            return sprintf($t['dow_range'], $t['dow_gen'][(int) $m[1]], $t['dow_gen'][(int) $m[2]]);
         }
         if (str_contains($expr, ',')) {
-            $list = array_map(fn($n) => $names[(int) $n], explode(',', $expr));
+            $list = array_map(fn($n) => $t['dow'][(int) $n], explode(',', $expr));
             $last = array_pop($list);
-            return $pl
-                ? 'w ' . implode(', ', $list) . " i $last"
-                : 'on ' . implode(', ', $list) . " and $last";
+            return sprintf($t['dow_list'], implode(', ', $list), $last);
         }
         return '';
     }
 
-    private function plForm(int $n, string $one, string $few, string $many): string
+    /**
+     * @param array<string> $forms [one, few, many] or [one, many]
+     */
+    private function plural(int $n, array $forms): string
     {
-        if ($n === 1) return $one;
-        $mod10  = $n % 10;
+        if (count($forms) === 2) {
+            return $n === 1 ? $forms[0] : $forms[1];
+        }
+        // Slavic pluralization...
+        $mod10 = $n % 10;
         $mod100 = $n % 100;
-        if ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 10 || $mod100 > 20)) return $few;
-        return $many;
+        if ($n === 1)
+            return $forms[0];
+        if ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 10 || $mod100 > 20))
+            return $forms[1];
+        return $forms[2];
     }
 }
